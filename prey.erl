@@ -17,15 +17,18 @@ start() ->
     connect_to_remote_node().
 
 stop() ->
-    {?REMOTEMAILBOX,?REMOTENODE} ! {self(), stop},
+    {?REMOTEMAILBOX,?REMOTENODE} ! {self_pid(), stop},
     ?SELF_PROCESS ! stop,
     unregister(?SELF_PROCESS).
 
 subscribe_to_topic(TopicName) ->
-    {?REMOTEMAILBOX,?REMOTENODE} ! {self(), subscribe, TopicName}.
+    {?REMOTEMAILBOX,?REMOTENODE} ! {self_pid(), subscribe, TopicName}.
 
 spawn_turtle(TurtleSpawnTuple) ->
-    {?REMOTEMAILBOX,?REMOTENODE} ! {self(), spawn_turtle, TurtleSpawnTuple}.
+    {?REMOTEMAILBOX,?REMOTENODE} ! {self_pid(), spawn_turtle, TurtleSpawnTuple}.
+
+self_pid() ->
+    whereis(?SELF_PROCESS).
 
 start_process() ->
     Pid = spawn(fun loop/0),    

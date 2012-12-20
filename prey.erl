@@ -1,7 +1,7 @@
 -module(prey).
 -export([start/0, stop/0]).
 -define(REMOTENODE,'pred_prey_rosbridge@localhost').
--define(REMOTEMAILBOX,hello_ros_erlang_mailbox).
+-define(REMOTEMAILBOX,pred_prey_erlang_mailbox).
 -define(SELF_PROCESS,prey_process).
 -define(TOPIC_SELF_POSE,"/prey/pose").
 -define(TOPIC_PREDATOR_POSE,"/predator/pose").

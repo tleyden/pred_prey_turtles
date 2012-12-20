@@ -4,7 +4,7 @@
 
 import sys, getopt, types
   
-PKG = 'pred_prey_turtle' # this package name
+PKG = 'pred_prey_turtles' # this package name
 import roslib; roslib.load_manifest(PKG)
 import rospy
 from std_msgs.msg import String
@@ -38,8 +38,9 @@ def erlang_node_receive_message(msg, *k, **kw):
     if str(msg_type) == "stop":
         print "Exiting"
         evhand.StopLooping()
-    elif str(msg_type) == "spawn_turle":
+    elif str(msg_type) == "spawn_turtle":
         # TODO: get spawn parameters and spawn the turtle
+        print "Spawning a turtle"
         rospy.wait_for_service('spawn')
         try:
             spawn = rospy.ServiceProxy('spawn', Spawn)
@@ -51,7 +52,8 @@ def erlang_node_receive_message(msg, *k, **kw):
     elif str(msg_type) == "subscribe":
         # TODO: the topic name should come in the message, and based on
         # topic name, figure out the message type and callback handler
-        rospy.Subscriber(ROS_TOPIC_POSE, Pose, ros_receive_topic_message)
+        # rospy.Subscriber(ROS_TOPIC_POSE, Pose, ros_receive_topic_message)
+        pass
     elif str(msg_type) == "command_velocity":
         global publisher_command_velocity
         velocity_tuple = msg[2]

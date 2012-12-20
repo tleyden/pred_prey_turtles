@@ -35,15 +35,16 @@ def erlang_node_receive_message(msg, *k, **kw):
     global evhand
     if VERBOSE:
         print "Incoming msg=%s (k=%s, kw=%s)" % (`msg`, `k`, `kw`)
+    
+    msg_sender = msg[0]
     msg_type = msg[1]
+    
     if str(msg_type) == "stop":
         print "Exiting"
         evhand.StopLooping()
     elif str(msg_type) == ROS_SERVICE_SPAWN:
         spawn_params_tuple = msg[2]
-        spawn_turtle(spawn_params_tuple)
-        # TODO: respond back to sender with result
-
+        spawn_turtle(msg_sender, spawn_params_tuple)
     elif str(msg_type) == "subscribe":
         # TODO: the topic name should come in the message, and based on
         # topic name, figure out the message type and callback handler
@@ -57,7 +58,8 @@ def erlang_node_receive_message(msg, *k, **kw):
             print "Moving the turtle"
         publisher_command_velocity.publish(velocity_tuple[0], velocity_tuple[1])
 
-def spawn_turtle(spawn_params_tuple):
+def spawn_turtle(msg_sender, spawn_params_tuple):
+    global mailbox
     print "Spawning a turtle"
     rospy.wait_for_service(ROS_SERVICE_SPAWN)
     try:
@@ -66,6 +68,7 @@ def spawn_turtle(spawn_params_tuple):
         print spawn_response
     except rospy.ServiceException, e:
         print "Service call failed to spawn turtle: %s" % e        
+        mailbox.Send(msg_sender, erl_term.ErlAtom("stop"))
 
 def send_turtle_pose_erlang(data):
     global mailbox

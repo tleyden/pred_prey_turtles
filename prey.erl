@@ -64,7 +64,7 @@ move_turtle_randomly(_, _, _, _) ->
 loop() ->
     receive 
 	stop ->
-	    io:format("Stopping loop~n");
+	    io:format("Received stop, process exiting~n");
 	TurtleMessage ->
 	    { {SenderNodeName, SenderProcessName}, TurtlePose } = TurtleMessage,
 	    {TurtleXPosition, 

@@ -23,6 +23,7 @@ SELF_NODE_REGISTERED_PROCESS = "pred_prey_erlang_mailbox"
 ROS_NODE_NAME = 'pred_prey_rosbridge'
 #ROS_TOPIC_POSE = "/turtle1/pose"
 #ROS_TOPIC_COMMAND_VELOCITY = "/turtle1/command_velocity"
+ROS_SERVICE_SPAWN = "spawn"
 VERBOSE = True
 
 def ros_receive_topic_message(data):
@@ -38,16 +39,10 @@ def erlang_node_receive_message(msg, *k, **kw):
     if str(msg_type) == "stop":
         print "Exiting"
         evhand.StopLooping()
-    elif str(msg_type) == "spawn_turtle":
-        # TODO: get spawn parameters and spawn the turtle
-        print "Spawning a turtle"
-        rospy.wait_for_service('spawn')
-        try:
-            spawn = rospy.ServiceProxy('spawn', Spawn)
-            resp2 = spawn.call(SpawnRequest(5.0, 5.0, 0.0, "spawned2"))
-            print resp2
-        except rospy.ServiceException, e:
-            print "Service call failed to spawn turtle: %s" % e
+    elif str(msg_type) == ROS_SERVICE_SPAWN:
+        spawn_params_tuple = msg[2]
+        spawn_turtle(spawn_params_tuple)
+        # TODO: respond back to sender with result
 
     elif str(msg_type) == "subscribe":
         # TODO: the topic name should come in the message, and based on
@@ -61,7 +56,16 @@ def erlang_node_receive_message(msg, *k, **kw):
         if VERBOSE:
             print "Moving the turtle"
         publisher_command_velocity.publish(velocity_tuple[0], velocity_tuple[1])
-        
+
+def spawn_turtle(spawn_params_tuple):
+    print "Spawning a turtle"
+    rospy.wait_for_service(ROS_SERVICE_SPAWN)
+    try:
+        spawn = rospy.ServiceProxy(ROS_SERVICE_SPAWN, Spawn)
+        spawn_response = spawn.call(SpawnRequest(*spawn_params_tuple))
+        print spawn_response
+    except rospy.ServiceException, e:
+        print "Service call failed to spawn turtle: %s" % e        
 
 def send_turtle_pose_erlang(data):
     global mailbox

@@ -25,7 +25,7 @@ subscribe_to_topic(TopicName) ->
     {?REMOTEMAILBOX,?REMOTENODE} ! {self_pid(), subscribe, TopicName}.
 
 spawn_turtle(TurtleSpawnTuple) ->
-    {?REMOTEMAILBOX,?REMOTENODE} ! {self_pid(), spawn_turtle, TurtleSpawnTuple}.
+    {?REMOTEMAILBOX,?REMOTENODE} ! {self_pid(), spawn, TurtleSpawnTuple}.
 
 self_pid() ->
     whereis(?SELF_PROCESS).
@@ -36,7 +36,7 @@ start_process() ->
 
 remote_node_connected() ->
     start_process(),
-    spawn_turtle({?TURTLE_NAME, ?TURTLE_X, ?TURTLE_Y, ?TURTLE_THETA}),
+    spawn_turtle({?TURTLE_X, ?TURTLE_Y, ?TURTLE_THETA, ?TURTLE_NAME}),
     subscribe_to_topic(?TOPIC_PREDATOR_POSE),  %% what if topic doesn't exist yet?
     subscribe_to_topic(?TOPIC_SELF_POSE).
 

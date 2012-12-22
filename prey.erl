@@ -6,8 +6,8 @@
 -define(TOPIC_SELF_POSE,"/prey/pose").
 -define(TOPIC_PREDATOR_POSE,"/predator/pose").
 -define(TURTLE_NAME,"prey").
--define(TURTLE_X,2).
--define(TURTLE_Y,2).
+-define(TURTLE_X,5).
+-define(TURTLE_Y,5).
 -define(TURTLE_THETA,0).
 
 %% Prey turtle which receives predator coordinates and moves randomly.  

@@ -15,34 +15,42 @@ from turtlesim.srv import SpawnRequest
 
 from py_interface import erl_node, erl_opts, erl_eventhandler, erl_term
 
-#ERLANG_REMOTE_NODE_REGISTERED_PROCESS = 'enode1_process'
-#ERLANG_REMOTE_NODE_NAME = 'enode1@localhost'
 SELF_NODE_NAME = "pred_prey_rosbridge@localhost"
 ERLANG_COOKIE = "pred_prey_erlang_cookie"
 SELF_NODE_REGISTERED_PROCESS = "pred_prey_erlang_mailbox"
 ROS_NODE_NAME = 'pred_prey_rosbridge'
-#ROS_TOPIC_POSE = "/turtle1/pose"
-#ROS_TOPIC_COMMAND_VELOCITY = "/turtle1/command_velocity"
 ROS_SERVICE_SPAWN = "spawn"
 VERBOSE = True
 
 class RosBridge:
 
     def __init__(self):
+
         self.evhand = None
         self.mailbox = None
         self.publisher_command_velocity = None
+        self.topic2process = {}
+
         self.init_ros()
         node = self.init_erlang_node()
         self.init_erlang_mailbox(node)
         self.run_erlang_event_handler() # blocks
+        
+    def ros_receive_prey_pose_message(self, data):
+        self.ros_receive_pose_message("/prey/pose", data)
+    
+    def ros_receive_predator_pose_message(self, data):
+        self.ros_receive_pose_message("/predator/pose", data)
 
-    def ros_receive_topic_message(self, data):
+    def ros_receive_pose_message(self, topic, data):
 
-        # TODO: find all processes listening for this topic and forward topic data
         if VERBOSE:
-            rospy.loginfo("Ros topic messsage " + rospy.get_caller_id() + " x: %s y: %s", data.x, data.y)
-        self.send_turtle_pose_erlang(data)
+            rospy.loginfo("Ros " + topic + " messsage " + rospy.get_caller_id() + " x: %s y: %s", data.x, data.y)
+    
+        subscribers = self.topic2process[topic]
+        for remote_pid in subscribers:
+            self.send_turtle_pose_erlang(remote_pid, topic, data)
+
 
     def erlang_node_receive_message(self, msg, *k, **kw):
         if VERBOSE:
@@ -75,7 +83,24 @@ class RosBridge:
         # does our topic2process dictionary already contain that topic?
         # if not, we need to create it in ros
         # add this process to the list of processes that will have topic messages forwarded
-        pass
+        
+        if not self.topic2process.has_key(topic_name):
+            subscribers = [remote_pid]
+            self.topic2process[topic_name] = subscribers
+            if topic_name == "/prey/pose":
+                rospy.Subscriber(topic_name, Pose, self.ros_receive_prey_pose_message)
+            elif topic_name == "/predator/pose":
+                rospy.Subscriber(topic_name, Pose, self.ros_receive_predator_pose_message)
+
+        else:
+            subscribers = self.topic2process
+            subscribers.append(remote_pid)
+            self.topic2process[topic_name] = subscribers
+
+
+    def create_command_velocity_publisher(self, turtle_name):
+            topic = "/%s/command_velocity" % turtle_name
+            self.publisher_command_velocity = rospy.Publisher(topic, Velocity)
 
     def spawn_turtle(self, remote_pid, spawn_params_tuple):
         print "Spawning a turtle"
@@ -83,30 +108,29 @@ class RosBridge:
         try:
             spawn = rospy.ServiceProxy(ROS_SERVICE_SPAWN, Spawn)
             spawn_response = spawn.call(SpawnRequest(*spawn_params_tuple))
+            turtle_name = spawn_params_tuple[3]
+            self.create_command_velocity_publisher(turtle_name)
             print spawn_response
         except rospy.ServiceException, e:
             print "Service call failed to spawn turtle: %s" % e        
             self.mailbox.Send(remote_pid, erl_term.ErlAtom("stop"))
 
-    def send_turtle_pose_erlang(self, data):
-        node_name_atom = erl_term.ErlAtom(ERLANG_REMOTE_NODE_NAME)
-        remote_pid = erl_term.ErlPid(node=node_name_atom, id=38, serial=0, creation=1)
-        msg_data = erl_term.ErlNumber(data.x)
-        pose = [erl_term.ErlNumber(data.x), 
-                erl_term.ErlNumber(data.y),
-                erl_term.ErlNumber(data.theta),
-                erl_term.ErlNumber(data.linear_velocity),
-                erl_term.ErlNumber(data.angular_velocity)]
-        msg_data = erl_term.ErlTuple(pose)
+    def send_turtle_pose_erlang(self, remote_pid, topic, data):
+        topic_atom = erl_term.ErlAtom("%s" % topic)
+        msg_tuple = [topic_atom,
+                     erl_term.ErlNumber(data.x), 
+                     erl_term.ErlNumber(data.y),
+                     erl_term.ErlNumber(data.theta),
+                     erl_term.ErlNumber(data.linear_velocity),
+                     erl_term.ErlNumber(data.angular_velocity)]
+        msg_data = erl_term.ErlTuple(msg_tuple)
         self_node_name = erl_term.ErlAtom("%s" % SELF_NODE_NAME)
         self_reg_process = erl_term.ErlAtom("%s" % SELF_NODE_REGISTERED_PROCESS)
         return_addr = erl_term.ErlTuple([self_node_name, self_reg_process])
         msg = erl_term.ErlTuple([return_addr, msg_data])
-        remote_process_atom = erl_term.ErlAtom("%s" % ERLANG_REMOTE_NODE_REGISTERED_PROCESS)
-        dest = erl_term.ErlTuple([remote_process_atom, node_name_atom])
-        self.mailbox.Send(dest, msg)
+        self.mailbox.Send(remote_pid, msg)
         if VERBOSE:
-            print "Sent message to (%s,%s)" % (ERLANG_REMOTE_NODE_REGISTERED_PROCESS, ERLANG_REMOTE_NODE_NAME)
+            print "Sent %s message to %s" % (topic, remote_pid)
 
     def init_erlang_node(self):
         node = erl_node.ErlNode(SELF_NODE_NAME, erl_opts.ErlNodeOpts(cookie=ERLANG_COOKIE))

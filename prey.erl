@@ -66,13 +66,14 @@ loop() ->
 	stop ->
 	    io:format("Received stop, process exiting~n");
 	TurtleMessage ->
-	    { {SenderNodeName, SenderProcessName}, TurtlePose } = TurtleMessage,
-	    {TurtleXPosition, 
+	    { {SenderNodeName, SenderProcessName}, MessageBody } = TurtleMessage,
+	    {Topic,
+	     TurtleXPosition, 
 	     _TurtleYPosition, 
 	     _TurtleTheta, 
 	     TurtleLinearVelocity, 
-	     TurtleAngularVelocity} = TurtlePose,
-	    io:format("Sender Node Name: ~p Process Name: ~p~n", [SenderNodeName, SenderProcessName]),
+	     TurtleAngularVelocity} = MessageBody,
+	    io:format("Topic: ~p Sender Node Name: ~p Process Name: ~p~n", [Topic, SenderNodeName, SenderProcessName]),
 	    TurtleXPositionString = io_lib:format("~.1f",[TurtleXPosition]),
 	    io:format("Turtle X: ~p~n", TurtleXPositionString),
 	    move_turtle_randomly(SenderNodeName, SenderProcessName, TurtleLinearVelocity, TurtleAngularVelocity),

@@ -28,8 +28,8 @@ class RosBridge:
 
         self.evhand = None
         self.mailbox = None
-        self.publisher_command_velocity = None
-        self.topic2process = {}
+        self.subscriber_registry = {}  # topic -> remote_pid
+        self.publisher_registry = {}   # topic -> rospy.publisher instance
 
         self.init_ros()
         node = self.init_erlang_node()
@@ -47,7 +47,7 @@ class RosBridge:
         if VERBOSE:
             rospy.loginfo("Ros " + topic + " messsage " + rospy.get_caller_id() + " x: %s y: %s", data.x, data.y)
     
-        subscribers = self.topic2process[topic]
+        subscribers = self.subscriber_registry[topic]
         for remote_pid in subscribers:
             self.send_turtle_pose_erlang(remote_pid, topic, data)
 
@@ -72,35 +72,38 @@ class RosBridge:
             topic_name = msg[2]
             self.subscribe_process_to_topic(remote_pid, topic_name)
         elif str(msg_type) == "command_velocity":
-            velocity_tuple = msg[2]
+            turtle_type = msg[2]
+            velocity_tuple = msg[3]
             # velocity = Velocity(velocity_tuple)
             if VERBOSE:
                 print "Moving the turtle"
-            self.publisher_command_velocity.publish(velocity_tuple[0], velocity_tuple[1])
+            topic = "/%s/command_velocity" % turtle_type
+            publisher = self.publisher_registry[topic]
+            publisher.publish(velocity_tuple[0], velocity_tuple[1])
 
     def subscribe_process_to_topic(self, remote_pid, topic_name):
 
-        # does our topic2process dictionary already contain that topic?
+        # does our subscriber_registry dictionary already contain that topic?
         # if not, we need to create it in ros
         # add this process to the list of processes that will have topic messages forwarded
         
-        if not self.topic2process.has_key(topic_name):
+        if not self.subscriber_registry.has_key(topic_name):
             subscribers = [remote_pid]
-            self.topic2process[topic_name] = subscribers
+            self.subscriber_registry[topic_name] = subscribers
             if topic_name == "/prey/pose":
                 rospy.Subscriber(topic_name, Pose, self.ros_receive_prey_pose_message)
             elif topic_name == "/predator/pose":
                 rospy.Subscriber(topic_name, Pose, self.ros_receive_predator_pose_message)
 
         else:
-            subscribers = self.topic2process[topic_name]
+            subscribers = self.subscriber_registry[topic_name]
             subscribers.append(remote_pid)
-            self.topic2process[topic_name] = subscribers
+            self.subscriber_registry[topic_name] = subscribers
 
 
-    def create_command_velocity_publisher(self, turtle_name):
-            topic = "/%s/command_velocity" % turtle_name
-            self.publisher_command_velocity = rospy.Publisher(topic, Velocity)
+    def create_command_velocity_publisher(self, remote_pid, turtle_type):
+        topic = "/%s/command_velocity" % turtle_type
+        self.publisher_registry[topic] = rospy.Publisher(topic, Velocity) 
 
     def spawn_turtle(self, remote_pid, spawn_params_tuple):
         print "Spawning a turtle"
@@ -108,8 +111,8 @@ class RosBridge:
         try:
             spawn = rospy.ServiceProxy(ROS_SERVICE_SPAWN, Spawn)
             spawn_response = spawn.call(SpawnRequest(*spawn_params_tuple))
-            turtle_name = spawn_params_tuple[3]
-            self.create_command_velocity_publisher(turtle_name)
+            turtle_type = spawn_params_tuple[3]
+            self.create_command_velocity_publisher(remote_pid, turtle_type)
             print spawn_response
         except rospy.ServiceException, e:
             print "Service call failed to spawn turtle: %s" % e        

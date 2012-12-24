@@ -1,5 +1,5 @@
--module(prey).
--export([start/0, stop/0]).
+-module(pred_prey).
+-export([start/1, stop/0]).
 -define(REMOTENODE,'pred_prey_rosbridge@localhost').
 -define(REMOTEMAILBOX,pred_prey_erlang_mailbox).
 -define(SELF_PROCESS,prey_process).
@@ -10,11 +10,11 @@
 -define(TURTLE_Y,5).
 -define(TURTLE_THETA,0).
 
-%% DO NOT USE - DEAD. Use pred_prey.erl
+%% Prey turtle which receives predator coordinates and moves randomly.  
+%% Eventually will have avoidance behavior to avoid being eaten.
 
-
-start() ->
-    connect_to_remote_node().
+start(TurtleType) ->
+    connect_to_remote_node(TurtleType).
 
 stop() ->
     {?REMOTEMAILBOX,?REMOTENODE} ! {self_pid(), stop},
@@ -30,22 +30,22 @@ spawn_turtle(TurtleSpawnTuple) ->
 self_pid() ->
     whereis(?SELF_PROCESS).
 
-start_process() ->
-    Pid = spawn(fun loop/0),    
+start_process(TurtleType) ->
+    Pid = spawn(fun () -> loop(TurtleType) end),
     register(?SELF_PROCESS, Pid).
 
-remote_node_connected() ->
-    start_process(),
+remote_node_connected(TurtleType) ->
+    start_process(TurtleType),
     spawn_turtle({?TURTLE_X, ?TURTLE_Y, ?TURTLE_THETA, ?TURTLE_NAME}),
     subscribe_to_topic(?TOPIC_PREDATOR_POSE),  %% what if topic doesn't exist yet?
     subscribe_to_topic(?TOPIC_SELF_POSE).
 
-connect_to_remote_node() ->
+connect_to_remote_node(TurtleType) ->
     %% in order to be able to receive messages from remote node, we must connect
     ConnectedRemoteNode = net_kernel:connect(?REMOTENODE),
     case ConnectedRemoteNode of
 	true ->
-	    remote_node_connected();
+	    remote_node_connected(TurtleType);
 	false ->
 	    io:format("Could not connect to ~w, is it running? ~n", [?REMOTENODE])
     end.
@@ -61,7 +61,7 @@ move_turtle_randomly(SenderNodeName, SenderProcessName, TurtleLinearVelocity, Tu
 move_turtle_randomly(_, _, _, _) ->
     true.
 
-loop() ->
+loop(TurtleType) ->
     receive 
 	stop ->
 	    io:format("Received stop, process exiting~n");
@@ -77,5 +77,5 @@ loop() ->
 	    TurtleXPositionString = io_lib:format("~.1f",[TurtleXPosition]),
 	    io:format("Turtle X: ~p~n", TurtleXPositionString),
 	    move_turtle_randomly(SenderNodeName, SenderProcessName, TurtleLinearVelocity, TurtleAngularVelocity),
-	    loop()
+	    loop(TurtleType)
     end.

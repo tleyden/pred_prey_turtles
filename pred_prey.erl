@@ -1,44 +1,39 @@
 -module(pred_prey).
--export([start/1, stop/0]).
+-export([start/1, stop/1]).
 -define(REMOTENODE,'pred_prey_rosbridge@localhost').
 -define(REMOTEMAILBOX,pred_prey_erlang_mailbox).
--define(SELF_PROCESS,prey_process).
--define(TOPIC_SELF_POSE,"/prey/pose").
+-define(TOPIC_PREY_POSE,"/prey/pose").
 -define(TOPIC_PREDATOR_POSE,"/predator/pose").
--define(TURTLE_NAME,"prey").
 -define(TURTLE_X,5).
 -define(TURTLE_Y,5).
 -define(TURTLE_THETA,0).
 
-%% Prey turtle which receives predator coordinates and moves randomly.  
+%% Predator or prey turtle which receives predator coordinates and moves randomly.  
 %% Eventually will have avoidance behavior to avoid being eaten.
 
 start(TurtleType) ->
     connect_to_remote_node(TurtleType).
 
-stop() ->
-    {?REMOTEMAILBOX,?REMOTENODE} ! {self_pid(), stop},
-    ?SELF_PROCESS ! stop,
-    unregister(?SELF_PROCESS).
+stop(TurtleType) ->
+    {?REMOTEMAILBOX,?REMOTENODE} ! {whereis(TurtleType), stop},
+    TurtleType ! stop,
+    unregister(TurtleType).
 
-subscribe_to_topic(TopicName) ->
-    {?REMOTEMAILBOX,?REMOTENODE} ! {self_pid(), subscribe, TopicName}.
+subscribe_to_topic(TurtleType, TopicName) ->
+    {?REMOTEMAILBOX,?REMOTENODE} ! {whereis(TurtleType), subscribe, TopicName}.
 
-spawn_turtle(TurtleSpawnTuple) ->
-    {?REMOTEMAILBOX,?REMOTENODE} ! {self_pid(), spawn, TurtleSpawnTuple}.
-
-self_pid() ->
-    whereis(?SELF_PROCESS).
+spawn_turtle(TurtleType, TurtleSpawnTuple) ->
+    {?REMOTEMAILBOX,?REMOTENODE} ! {whereis(TurtleType), spawn, TurtleSpawnTuple}.
 
 start_process(TurtleType) ->
     Pid = spawn(fun () -> loop(TurtleType) end),
-    register(?SELF_PROCESS, Pid).
+    register(TurtleType, Pid).
 
 remote_node_connected(TurtleType) ->
     start_process(TurtleType),
-    spawn_turtle({?TURTLE_X, ?TURTLE_Y, ?TURTLE_THETA, ?TURTLE_NAME}),
-    subscribe_to_topic(?TOPIC_PREDATOR_POSE),  %% what if topic doesn't exist yet?
-    subscribe_to_topic(?TOPIC_SELF_POSE).
+    spawn_turtle(TurtleType, {?TURTLE_X, ?TURTLE_Y, ?TURTLE_THETA, atom_to_list(TurtleType)}),
+    subscribe_to_topic(TurtleType, ?TOPIC_PREDATOR_POSE),  %% what if topic doesn't exist yet?
+    subscribe_to_topic(TurtleType, ?TOPIC_PREY_POSE).
 
 connect_to_remote_node(TurtleType) ->
     %% in order to be able to receive messages from remote node, we must connect
@@ -64,7 +59,7 @@ move_turtle_randomly(_, _, _, _) ->
 loop(TurtleType) ->
     receive 
 	stop ->
-	    io:format("Received stop, process exiting~n");
+	    io:format("~p received stop, process exiting~n", TurtleType);
 	TurtleMessage ->
 	    { {SenderNodeName, SenderProcessName}, MessageBody } = TurtleMessage,
 	    {Topic,
@@ -73,7 +68,7 @@ loop(TurtleType) ->
 	     _TurtleTheta, 
 	     TurtleLinearVelocity, 
 	     TurtleAngularVelocity} = MessageBody,
-	    io:format("Topic: ~p Sender Node Name: ~p Process Name: ~p~n", [Topic, SenderNodeName, SenderProcessName]),
+	    io:format("Turtle: ~p Topic: ~p Sender: ~p Process: ~p~n", [TurtleType, Topic, SenderNodeName, SenderProcessName]),
 	    TurtleXPositionString = io_lib:format("~.1f",[TurtleXPosition]),
 	    io:format("Turtle X: ~p~n", TurtleXPositionString),
 	    move_turtle_randomly(SenderNodeName, SenderProcessName, TurtleLinearVelocity, TurtleAngularVelocity),

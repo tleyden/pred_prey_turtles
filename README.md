@@ -11,17 +11,20 @@ Simulation of two turtlesim turtles.
 
 ## TODO
 
-- Figure out how to spawn two turtles in the same world!
+- Finish prey.erl
 
-  ans: $ rosservice call spawn 2 2 0.2 ""
-       $ rostopic pub -1 /turtle1/command_velocity turtlesim/Velocity  -- 2.0  1.8
-       $ rostopic pub -1 /turtle2/command_velocity turtlesim/Velocity  -- 2.0  1.8
+  - Needs to be able to subscribe to two topics: self pose and predator pose
 
-- Create prey.erl, which just moves randomly (could put this in helloworld example actually)
+  - Make it move randomly whenever it has detected to not be moving (just like hello_ros_erlang)
 
-- Create predator.erl, which also just moves randomly
+- Create predator.erl, which subscribes to same topics and also moves randomly
 
-- Create simulation_engine.erl which watches both predator.erl and prey.erl positions, and detect collisions.  If collision, kill prey object.
+- Add simple collision detection to prey.erl, which kills itself when predator hits it
+
+- Consider moving collision detection to a new module called scape.erl or something similar
+
+
+Phase 2:
 
 - Make predator.erl smarter so that it moves towards prey
 

@@ -93,7 +93,7 @@ class RosBridge:
                 rospy.Subscriber(topic_name, Pose, self.ros_receive_predator_pose_message)
 
         else:
-            subscribers = self.topic2process
+            subscribers = self.topic2process[topic_name]
             subscribers.append(remote_pid)
             self.topic2process[topic_name] = subscribers
 

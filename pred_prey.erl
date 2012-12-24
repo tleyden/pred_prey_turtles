@@ -22,7 +22,13 @@ stop(TurtleType) ->
 subscribe_to_topic(TurtleType, TopicName) ->
     {?REMOTEMAILBOX,?REMOTENODE} ! {whereis(TurtleType), subscribe, TopicName}.
 
-spawn_turtle(TurtleType, TurtleSpawnTuple) ->
+spawn_turtle(TurtleType) ->
+    case TurtleType of
+	prey ->
+	    TurtleSpawnTuple = {0, 0, ?TURTLE_THETA, atom_to_list(TurtleType)};
+	predator ->
+	    TurtleSpawnTuple = {10, 10, ?TURTLE_THETA, atom_to_list(TurtleType)}
+    end,
     {?REMOTEMAILBOX,?REMOTENODE} ! {whereis(TurtleType), spawn, TurtleSpawnTuple}.
 
 start_process(TurtleType) ->
@@ -31,7 +37,7 @@ start_process(TurtleType) ->
 
 remote_node_connected(TurtleType) ->
     start_process(TurtleType),
-    spawn_turtle(TurtleType, {?TURTLE_X, ?TURTLE_Y, ?TURTLE_THETA, atom_to_list(TurtleType)}),
+    spawn_turtle(TurtleType),
     subscribe_to_topic(TurtleType, ?TOPIC_PREDATOR_POSE),  %% what if topic doesn't exist yet?
     subscribe_to_topic(TurtleType, ?TOPIC_PREY_POSE).
 

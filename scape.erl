@@ -28,15 +28,16 @@ handle_info(Message, State) ->
     {noreply, State}.
 
 handle_call(_Request, _From, State) ->
-    io:format("changenotiifer handle_call called.  State: ~p From: ~p ~n", [State,_From]),
+    io:format("handle_call called.  State: ~p From: ~p ~n", [State,_From]),
     {reply, helloworld, State}.
 
 handle_cast(stop, State) ->
-    pred_prey:stop_prey(),
-    pred_prey:stop_predator(),
     {stop, normal, State}.
 
 terminate(_Reason,_State) ->
+    io:format("terminate called.  State: ~p Reason: ~p ~n", [_State,_Reason]),
+    pred_prey:stop_prey(),
+    pred_prey:stop_predator(),
     ok.
 
 code_change(_OldVsn, State, _Extra) ->

@@ -75,7 +75,8 @@ move_turtle_randomly(TurtleType, SenderNodeName, SenderProcessName, TurtleLinear
     random:seed(now()),
     NewLinearVelocity = random:uniform(5) - 2,
     NewAngularVelocity = random:uniform(5) - 2,
-    {SenderProcessName, SenderNodeName} ! {self(), command_velocity, TurtleType, {NewLinearVelocity, NewAngularVelocity}};
+    ReturnAddress = whereis(TurtleType),
+    {SenderProcessName, SenderNodeName} ! {ReturnAddress, command_velocity, TurtleType, {NewLinearVelocity, NewAngularVelocity}};
 
 move_turtle_randomly(_, _, _, _, _) ->
     true.

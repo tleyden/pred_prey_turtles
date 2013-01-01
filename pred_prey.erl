@@ -1,5 +1,5 @@
 -module(pred_prey).
--export([start/1, stop/1]).
+-export([start_prey/0, start_predator/0, stop_prey/0, stop_predator/0]).
 -define(REMOTENODE,'pred_prey_rosbridge@localhost').
 -define(REMOTEMAILBOX,pred_prey_erlang_mailbox).
 -define(TOPIC_PREY_POSE,"/prey/pose").
@@ -9,16 +9,35 @@
 %% Predator or prey turtle which receives predator coordinates and moves randomly.  
 %% Eventually will have avoidance behavior to avoid being eaten.
 
+%% Public functions
+
+start_prey() ->
+    start(prey).
+
+start_predator() ->
+    start(predator).
+
+stop_prey() ->
+    stop(prey).
+
+stop_predator() ->
+    stop(predator).
+
+%% Private functions
+
 start(TurtleType) ->
     connect_to_remote_node(TurtleType).
 
 stop(TurtleType) ->
-    {?REMOTEMAILBOX,?REMOTENODE} ! {whereis(TurtleType), stop},
+    ReturnAddress = whereis(TurtleType),
+    %% stops the whole bridge .. not what we want.  {?REMOTEMAILBOX,?REMOTENODE} ! {ReturnAddress, stop},
+    {?REMOTEMAILBOX,?REMOTENODE} ! {ReturnAddress, kill, atom_to_list(TurtleType)},
     TurtleType ! stop,
     unregister(TurtleType).
 
 subscribe_to_topic(TurtleType, TopicName) ->
-    {?REMOTEMAILBOX,?REMOTENODE} ! {whereis(TurtleType), subscribe, TopicName}.
+    ReturnAddress = whereis(TurtleType),
+    {?REMOTEMAILBOX,?REMOTENODE} ! {ReturnAddress, subscribe, TopicName}.
 
 spawn_turtle(TurtleType) ->
     case TurtleType of
@@ -27,7 +46,8 @@ spawn_turtle(TurtleType) ->
 	predator ->
 	    TurtleSpawnTuple = {10, 10, ?TURTLE_START_THETA, atom_to_list(TurtleType)}
     end,
-    {?REMOTEMAILBOX,?REMOTENODE} ! {whereis(TurtleType), spawn, TurtleSpawnTuple}.
+    ReturnAddress = whereis(TurtleType),
+    {?REMOTEMAILBOX,?REMOTENODE} ! {ReturnAddress, spawn, TurtleSpawnTuple}.
 
 start_process(TurtleType) ->
     Pid = spawn(fun () -> loop(TurtleType) end),
@@ -87,7 +107,7 @@ handle_turtle_pose_message(TurtleType, SenderNodeName, SenderProcessName, Messag
 loop(TurtleType) ->
     receive 
 	stop ->
-	    io:format("~p received stop, process exiting~n", TurtleType);
+	    io:format("~p received stop, process exiting~n", [TurtleType]);
 	{ {SenderNodeName, SenderProcessName}, MessageBody } ->
 	    handle_turtle_pose_message(TurtleType, SenderNodeName, SenderProcessName, MessageBody),
 	    loop(TurtleType)

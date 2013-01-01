@@ -11,7 +11,9 @@ from std_msgs.msg import String
 from turtlesim.msg import Pose
 from turtlesim.msg import Velocity
 from turtlesim.srv import Spawn
+from turtlesim.srv import Kill
 from turtlesim.srv import SpawnRequest
+from turtlesim.srv import KillRequest
 
 from py_interface import erl_node, erl_opts, erl_eventhandler, erl_term
 
@@ -20,6 +22,7 @@ ERLANG_COOKIE = "pred_prey_erlang_cookie"
 SELF_NODE_REGISTERED_PROCESS = "pred_prey_erlang_mailbox"
 ROS_NODE_NAME = 'pred_prey_rosbridge'
 ROS_SERVICE_SPAWN = "spawn"
+ROS_SERVICE_KILL = "kill"
 VERBOSE = True
 
 class RosBridge:
@@ -62,6 +65,9 @@ class RosBridge:
         if str(msg_type) == "stop":
             print "Exiting"
             self.evhand.StopLooping()
+        elif str(msg_type) == ROS_SERVICE_KILL:
+            turtle_type = msg[2]
+            self.kill_turtle(remote_pid, turtle_type)
         elif str(msg_type) == ROS_SERVICE_SPAWN:
             spawn_params_tuple = msg[2]
             self.spawn_turtle(remote_pid, spawn_params_tuple)
@@ -118,6 +124,18 @@ class RosBridge:
             print "Service call failed to spawn turtle: %s" % e        
             self.mailbox.Send(remote_pid, erl_term.ErlAtom("stop"))
 
+    def kill_turtle(self, remote_pid, turtle_type):
+        print "Killing turtle %s" % turtle_type
+        rospy.wait_for_service(ROS_SERVICE_KILL)
+        try:
+            kill = rospy.ServiceProxy(ROS_SERVICE_KILL, Kill)
+            kill_response = kill.call(KillRequest(turtle_type))
+            print kill_response
+        except rospy.ServiceException, e:
+            print "Service call failed to kill turtle: %s" % e        
+            self.mailbox.Send(remote_pid, erl_term.ErlAtom("stop"))
+
+
     def send_turtle_pose_erlang(self, remote_pid, topic, data):
         topic_atom = erl_term.ErlAtom("%s" % topic)
         msg_tuple = [topic_atom,
@@ -145,6 +163,8 @@ class RosBridge:
         self.mailbox.RegisterName(SELF_NODE_REGISTERED_PROCESS)
 
     def run_erlang_event_handler(self):
+        if VERBOSE:
+            print "Waiting for Erlang node messages.. kill this process via 'kill -9'"
         self.evhand = erl_eventhandler.GetEventHandler()
         self.evhand.Loop()    
 

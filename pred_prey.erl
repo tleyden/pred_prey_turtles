@@ -1,10 +1,6 @@
 -module(pred_prey).
 -export([start_prey/0, start_predator/0, stop_prey/0, stop_predator/0]).
--define(REMOTENODE,'pred_prey_rosbridge@localhost').
--define(REMOTEMAILBOX,pred_prey_erlang_mailbox).
--define(TOPIC_PREY_POSE,"/prey/pose").
--define(TOPIC_PREDATOR_POSE,"/predator/pose").
--define(TURTLE_START_THETA,0).
+-include("pred_prey.hrl").
 
 %% Predator or prey turtle which receives predator coordinates and moves randomly.  
 %% Eventually will have avoidance behavior to avoid being eaten.
@@ -35,10 +31,6 @@ stop(TurtleType) ->
     TurtleType ! stop,
     unregister(TurtleType).
 
-subscribe_to_topic(TurtleType, TopicName) ->
-    ReturnAddress = whereis(TurtleType),
-    {?REMOTEMAILBOX,?REMOTENODE} ! {ReturnAddress, subscribe, TopicName}.
-
 spawn_turtle(TurtleType) ->
     case TurtleType of
 	prey ->
@@ -56,8 +48,9 @@ start_process(TurtleType) ->
 remote_node_connected(TurtleType) ->
     start_process(TurtleType),
     spawn_turtle(TurtleType),
-    subscribe_to_topic(TurtleType, ?TOPIC_PREDATOR_POSE), 
-    subscribe_to_topic(TurtleType, ?TOPIC_PREY_POSE).
+    ReturnAddress = whereis(TurtleType),
+    rosbridge:subscribe_to_topic(ReturnAddress, ?TOPIC_PREDATOR_POSE), 
+    rosbridge:subscribe_to_topic(ReturnAddress, ?TOPIC_PREY_POSE).
 
 connect_to_remote_node(TurtleType) ->
     %% in order to be able to receive messages from remote node, we must connect

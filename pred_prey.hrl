@@ -1,0 +1,5 @@
+-define(REMOTENODE,'pred_prey_rosbridge@localhost').
+-define(REMOTEMAILBOX,pred_prey_erlang_mailbox).
+-define(TOPIC_PREY_POSE,"/prey/pose").
+-define(TOPIC_PREDATOR_POSE,"/predator/pose").
+-define(TURTLE_START_THETA,0).

@@ -22,7 +22,12 @@ stop_predator() ->
 %% Private functions
 
 start(TurtleType) ->
-    connect_to_remote_node(TurtleType).
+    SuccessFunction = fun () -> remote_node_connected(TurtleType) end,
+    FailureFunction = fun () -> 
+			      io:format("Could not connect to ~w, is it running? ~n", [?REMOTENODE]),
+			      stop(TurtleType)
+		      end,
+    rosbridge:connect(SuccessFunction, FailureFunction).
 
 stop(TurtleType) ->
     ReturnAddress = whereis(TurtleType),
@@ -52,15 +57,6 @@ remote_node_connected(TurtleType) ->
     rosbridge:subscribe_to_topic(ReturnAddress, ?TOPIC_PREDATOR_POSE), 
     rosbridge:subscribe_to_topic(ReturnAddress, ?TOPIC_PREY_POSE).
 
-connect_to_remote_node(TurtleType) ->
-    %% in order to be able to receive messages from remote node, we must connect
-    ConnectedRemoteNode = net_kernel:connect(?REMOTENODE),
-    case ConnectedRemoteNode of
-	true ->
-	    remote_node_connected(TurtleType);
-	false ->
-	    io:format("Could not connect to ~w, is it running? ~n", [?REMOTENODE])
-    end.
 
 move_turtle_randomly(TurtleType, SenderNodeName, SenderProcessName, TurtleLinearVelocity, TurtleAngularVelocity) 
   when TurtleLinearVelocity < 0.01, TurtleAngularVelocity < 0.01 ->

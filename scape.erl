@@ -3,6 +3,7 @@
 -behavior(gen_server).
 -export([start/0, stop/0]). 
 -export([init/1, terminate/2, handle_call/3, handle_cast/2, handle_info/2, code_change/3]).
+-include("pred_prey.hrl").
 
 %% start both predator and prey and link to their processes
 %% subscribe to both the predator and prey position and detect collisions
@@ -18,13 +19,23 @@ stop() ->
 %% Callback
 
 init([]) ->
-    pred_prey:start_prey(),
-    pred_prey:start_predator(),
     io:format("init called~n"),
+    SuccessFunction = fun () -> pred_prey:start_prey(),
+				pred_prey:start_predator(),				
+				ReturnAddress = whereis(?MODULE),
+				rosbridge:subscribe_to_topic(ReturnAddress, ?TOPIC_PREDATOR_POSE), 
+				rosbridge:subscribe_to_topic(ReturnAddress, ?TOPIC_PREY_POSE)
+		      end,
+    FailureFunction = fun () -> 
+			      io:format("Could not connect to ~w, is it running? ~n", [?REMOTENODE]),
+			      stop()
+		      end,
+    rosbridge:connect(SuccessFunction, FailureFunction),
     {ok, []}.
 
 handle_info(Message, State) ->
     io:format("handle_info called.  Message: ~p ~n", [Message]),
+    %% TODO: collision detection -> stop simulation
     {noreply, State}.
 
 handle_call(_Request, _From, State) ->

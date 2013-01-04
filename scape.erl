@@ -36,7 +36,6 @@ init([]) ->
 
 handle_info(Message, State) ->
     io:format("handle_info called.  Message: ~p ~n", [Message]),
-    %% TODO: collision detection -> stop simulation
     Topic = topic_from_message(Message),
     case Topic of 
 	'/prey/pose' ->
@@ -51,6 +50,9 @@ handle_info(Message, State) ->
 	    io:format("unknown topic ~p ~n", [Topic]),
 	    NewState = State
     end,
+    %% TODO: collision detection -> stop simulation
+    CollisionDetected = detect_collision(NewState),
+    io:format("Collission Detected: ~p ~n", [CollisionDetected]),
     io:format("handle_info called.  NewState: ~p ~n", [NewState]),
     {noreply, NewState}.
 
@@ -73,6 +75,42 @@ code_change(_OldVsn, State, _Extra) ->
     
 
 %% Private functions
+
+detect_collision(State) ->
+    case State of
+	{'/prey/pose', undefined, '/predator/pose', undefined} ->
+	    false;
+	{'/prey/pose', undefined, '/predator/pose', _Value} -> 
+	    false;
+	{'/prey/pose', _Value, '/predator/pose', undefined} -> 
+	    false;
+	{'/prey/pose', LastPreyMessage, '/predator/pose', LastPredatorMessage} ->
+	    detect_collision(LastPreyMessage, LastPredatorMessage)
+    end.
+
+detect_collision(LastPreyMessage, LastPredatorMessage) ->
+    PreyXYPosition = xy_position_from_message(LastPreyMessage),
+    PredatorXYPosition = xy_position_from_message(LastPredatorMessage),
+    EuclideanDistance = euclidean_distance(PreyXYPosition, PredatorXYPosition),
+    case EuclideanDistance of 
+	N when N < 1.0 ->
+	    true;
+	_ ->
+	    false
+    end.
+
+euclidean_distance(_PreyXYPosition, _PredatorXYPosition) ->
+    0.5.
+
+xy_position_from_message(Message) ->
+    {{_SenderNodeName, _SenderProcessName}, MessageBody} = Message,    
+    {_Topic,
+     TurtleXPosition, 
+     TurtleYPosition, 
+     _TurtleTheta, 
+     _TurtleLinearVelocity, 
+     _TurtleAngularVelocity} = MessageBody,
+    {TurtleXPosition, TurtleYPosition}.
 
 topic_from_message(Message) ->
     {{_SenderNodeName, _SenderProcessName}, MessageBody} = Message,    

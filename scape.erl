@@ -3,6 +3,7 @@
 -behavior(gen_server).
 -export([start/0, stop/0]). 
 -export([init/1, terminate/2, handle_call/3, handle_cast/2, handle_info/2, code_change/3]).
+-export([topic_from_message/1]).
 -include("pred_prey.hrl").
 
 %% start both predator and prey and link to their processes
@@ -31,12 +32,27 @@ init([]) ->
 			      stop()
 		      end,
     rosbridge:connect(SuccessFunction, FailureFunction),
-    {ok, []}.
+    {ok, {'/prey/pose', undefined, '/predator/pose', undefined}}.
 
 handle_info(Message, State) ->
     io:format("handle_info called.  Message: ~p ~n", [Message]),
     %% TODO: collision detection -> stop simulation
-    {noreply, State}.
+    Topic = topic_from_message(Message),
+    case Topic of 
+	'/prey/pose' ->
+	    io:format("prey pose~n"),
+	    {'/prey/pose', _Ignored, '/predator/pose', PreviousPredatorPose} = State,
+	    NewState = {'/prey/pose', Message, '/predator/pose', PreviousPredatorPose};
+	'/predator/pose' ->
+	    io:format("predator pose~n"),
+	    {'/prey/pose', PreviousPreyPose, '/predator/pose', _Ignored} = State,
+	    NewState = {'/prey/pose', PreviousPreyPose, '/predator/pose', Message};
+	 _ ->
+	    io:format("unknown topic ~p ~n", [Topic]),
+	    NewState = State
+    end,
+    io:format("handle_info called.  NewState: ~p ~n", [NewState]),
+    {noreply, NewState}.
 
 handle_call(_Request, _From, State) ->
     io:format("handle_call called.  State: ~p From: ~p ~n", [State,_From]),
@@ -55,3 +71,15 @@ code_change(_OldVsn, State, _Extra) ->
     {ok, State}.
 
     
+
+%% Private functions
+
+topic_from_message(Message) ->
+    {{_SenderNodeName, _SenderProcessName}, MessageBody} = Message,    
+    {Topic,
+     _TurtleXPosition, 
+     _TurtleYPosition, 
+     _TurtleTheta, 
+     _TurtleLinearVelocity, 
+     _TurtleAngularVelocity} = MessageBody,
+    Topic.

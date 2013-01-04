@@ -32,13 +32,10 @@ Start the erlang shell:
 
 In the erlang shell:
 
-    > scape:start()
+    erlang> scape:start()
+    erlang> scape:stop()
 
-to start it, and 
-
-   > scape:stop()
-
-to stop it. 
+to start and stop it
 
 ## Known issues
 

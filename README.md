@@ -8,29 +8,6 @@ Simulation of two turtlesim turtles.
 - predator.erl controls the predator, prey.erl controls the prey
 - The predator watches the position of the prey, and the prey watches the position of the predator
 
-
-## TODO
-
-- Finish prey.erl
-
-  - Needs to be able to subscribe to two topics: self pose and predator pose
-
-  - Make it move randomly whenever it has detected to not be moving (just like hello_ros_erlang)
-
-- Create predator.erl, which subscribes to same topics and also moves randomly
-
-- Add simple collision detection to prey.erl, which kills itself when predator hits it
-
-- Consider moving collision detection to a new module called scape.erl or something similar
-
-
-Phase 2:
-
-- Make predator.erl smarter so that it moves towards prey
-
-- Make prey smarter, so that it evades predator
-
-
 ## Running
 
 Start roscore:
@@ -52,4 +29,18 @@ Start the python script:
 Start the erlang shell:
 
     erl -sname predprey@localhost -setcookie pred_prey_erlang_cookie
+
+In the erlang shell:
+
+    > scape:start()
+
+to start it, and 
+
+   > scape:stop()
+
+to stop it. 
+
+## Known issues
+
+The ros turtle sim (rosrun turtlesim turtlesim_node) needs to be restarted each time the scape is restarted.
 

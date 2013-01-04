@@ -3,15 +3,14 @@
 -behavior(gen_server).
 -export([start/0, stop/0]). 
 -export([init/1, terminate/2, handle_call/3, handle_cast/2, handle_info/2, code_change/3]).
--export([topic_from_message/1]).
+-export([euclidean_distance/2]).
 -include("pred_prey.hrl").
 
-%% start both predator and prey and link to their processes
+%% start both predator and prey
 %% subscribe to both the predator and prey position and detect collisions
 %% shut down predator and prey, then shutdown self
 
 start() ->
-    % gen_server:start({local, ?MODULE}, ?MODULE, undefined, []).
     gen_server:start({local, ?MODULE}, ?MODULE, [], []).
 
 stop() ->
@@ -32,19 +31,16 @@ init([]) ->
 			      stop()
 		      end,
     rosbridge:connect(SuccessFunction, FailureFunction),
-    {ok, {'/prey/pose', undefined, '/predator/pose', undefined}}.
+    InitialState = {'/prey/pose', undefined, '/predator/pose', undefined},
+    {ok, InitialState}.
 
 handle_info(Message, State) ->
-    io:format("handle_info called.  Message: ~p ~n", [Message]),
     NewState = new_state_from_message(Message, State),
-    %% TODO: collision detection -> stop simulation
     CollisionDetected = detect_collision(NewState),
-    io:format("Collission Detected: ~p ~n", [CollisionDetected]),
     case CollisionDetected of
 	true ->
 	    {stop, normal, NewState};
 	_ ->
-	    io:format("handle_info called.  returning NewState: ~p ~n", [NewState]),
 	    {noreply, NewState}
     end.
 
@@ -64,19 +60,16 @@ terminate(_Reason,_State) ->
 code_change(_OldVsn, State, _Extra) ->
     {ok, State}.
 
-    
-
+   
 %% Private functions
 
 new_state_from_message(Message, State) ->
     Topic = topic_from_message(Message),
     case Topic of 
 	'/prey/pose' ->
-	    io:format("prey pose~n"),
 	    {'/prey/pose', _Ignored, '/predator/pose', PreviousPredatorPose} = State,
 	    NewState = {'/prey/pose', Message, '/predator/pose', PreviousPredatorPose};
 	'/predator/pose' ->
-	    io:format("predator pose~n"),
 	    {'/prey/pose', PreviousPreyPose, '/predator/pose', _Ignored} = State,
 	    NewState = {'/prey/pose', PreviousPreyPose, '/predator/pose', Message};
 	 _ ->
@@ -108,8 +101,8 @@ detect_collision(LastPreyMessage, LastPredatorMessage) ->
 	    false
     end.
 
-euclidean_distance(_PreyXYPosition, _PredatorXYPosition) ->
-    0.5.
+euclidean_distance({X1, Y1}, {X2, Y2}) ->
+    math:sqrt(math:pow(X2 - X1, 2) + math:pow(Y2 - Y1, 2)).
 
 xy_position_from_message(Message) ->
     {{_SenderNodeName, _SenderProcessName}, MessageBody} = Message,    

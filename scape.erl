@@ -36,25 +36,17 @@ init([]) ->
 
 handle_info(Message, State) ->
     io:format("handle_info called.  Message: ~p ~n", [Message]),
-    Topic = topic_from_message(Message),
-    case Topic of 
-	'/prey/pose' ->
-	    io:format("prey pose~n"),
-	    {'/prey/pose', _Ignored, '/predator/pose', PreviousPredatorPose} = State,
-	    NewState = {'/prey/pose', Message, '/predator/pose', PreviousPredatorPose};
-	'/predator/pose' ->
-	    io:format("predator pose~n"),
-	    {'/prey/pose', PreviousPreyPose, '/predator/pose', _Ignored} = State,
-	    NewState = {'/prey/pose', PreviousPreyPose, '/predator/pose', Message};
-	 _ ->
-	    io:format("unknown topic ~p ~n", [Topic]),
-	    NewState = State
-    end,
+    NewState = new_state_from_message(Message, State),
     %% TODO: collision detection -> stop simulation
     CollisionDetected = detect_collision(NewState),
     io:format("Collission Detected: ~p ~n", [CollisionDetected]),
-    io:format("handle_info called.  NewState: ~p ~n", [NewState]),
-    {noreply, NewState}.
+    case CollisionDetected of
+	true ->
+	    {stop, normal, NewState};
+	_ ->
+	    io:format("handle_info called.  returning NewState: ~p ~n", [NewState]),
+	    {noreply, NewState}
+    end.
 
 handle_call(_Request, _From, State) ->
     io:format("handle_call called.  State: ~p From: ~p ~n", [State,_From]),
@@ -75,6 +67,23 @@ code_change(_OldVsn, State, _Extra) ->
     
 
 %% Private functions
+
+new_state_from_message(Message, State) ->
+    Topic = topic_from_message(Message),
+    case Topic of 
+	'/prey/pose' ->
+	    io:format("prey pose~n"),
+	    {'/prey/pose', _Ignored, '/predator/pose', PreviousPredatorPose} = State,
+	    NewState = {'/prey/pose', Message, '/predator/pose', PreviousPredatorPose};
+	'/predator/pose' ->
+	    io:format("predator pose~n"),
+	    {'/prey/pose', PreviousPreyPose, '/predator/pose', _Ignored} = State,
+	    NewState = {'/prey/pose', PreviousPreyPose, '/predator/pose', Message};
+	 _ ->
+	    io:format("unknown topic ~p ~n", [Topic]),
+	    NewState = State
+    end,
+    NewState.
 
 detect_collision(State) ->
     case State of

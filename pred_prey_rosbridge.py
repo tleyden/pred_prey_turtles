@@ -23,7 +23,7 @@ SELF_NODE_REGISTERED_PROCESS = "pred_prey_erlang_mailbox"
 ROS_NODE_NAME = 'pred_prey_rosbridge'
 ROS_SERVICE_SPAWN = "spawn"
 ROS_SERVICE_KILL = "kill"
-VERBOSE = True
+VERBOSE = False
 
 class RosBridge:
 
@@ -125,7 +125,8 @@ class RosBridge:
             self.mailbox.Send(remote_pid, erl_term.ErlAtom("stop"))
 
     def kill_turtle(self, remote_pid, turtle_type):
-        print "Killing turtle %s" % turtle_type
+        if VERBOSE:
+            print "Killing turtle %s" % turtle_type
         rospy.wait_for_service(ROS_SERVICE_KILL)
         try:
             kill = rospy.ServiceProxy(ROS_SERVICE_KILL, Kill)

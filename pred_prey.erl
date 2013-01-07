@@ -41,7 +41,7 @@ spawn_turtle(TurtleType) ->
 	prey ->
 	    TurtleSpawnTuple = {2, 2, ?TURTLE_START_THETA, atom_to_list(TurtleType)};
 	predator ->
-	    TurtleSpawnTuple = {10, 10, ?TURTLE_START_THETA, atom_to_list(TurtleType)}
+	    TurtleSpawnTuple = {4, 4, ?TURTLE_START_THETA, atom_to_list(TurtleType)}
     end,
     ReturnAddress = whereis(TurtleType),
     {?REMOTEMAILBOX,?REMOTENODE} ! {ReturnAddress, spawn, TurtleSpawnTuple}.
@@ -60,7 +60,7 @@ remote_node_connected(TurtleType) ->
 
 move_turtle_randomly(TurtleType, SenderNodeName, SenderProcessName, TurtleLinearVelocity, TurtleAngularVelocity) 
   when TurtleLinearVelocity < 0.01, TurtleAngularVelocity < 0.01 ->
-    io:format("Turtle stopped moving, moving it~n"),
+    %% io:format("Turtle stopped moving, moving it~n");
     random:seed(now()),
     NewLinearVelocity = random:uniform(5) - 2,
     NewAngularVelocity = random:uniform(5) - 2,
@@ -85,7 +85,7 @@ handle_turtle_pose_message(TurtleType, SenderNodeName, SenderProcessName, Messag
      _TurtleTheta, 
      TurtleLinearVelocity, 
      TurtleAngularVelocity} = MessageBody,
-    io:format("Turtle: ~p Topic: ~p Sender: ~p Process: ~p~n", [TurtleType, Topic, SenderNodeName, SenderProcessName]),
+    %% io:format("Turtle: ~p Topic: ~p Sender: ~p Process: ~p~n", [TurtleType, Topic, SenderNodeName, SenderProcessName]);
     case is_other_turtle(TurtleType, Topic) of
 	false ->
 	    move_turtle_randomly(TurtleType, SenderNodeName, SenderProcessName, TurtleLinearVelocity, TurtleAngularVelocity);

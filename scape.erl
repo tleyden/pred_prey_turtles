@@ -96,6 +96,7 @@ detect_collision(LastPreyMessage, LastPredatorMessage) ->
     EuclideanDistance = euclidean_distance(PreyXYPosition, PredatorXYPosition),
     case EuclideanDistance of 
 	N when N < 1.0 ->
+	    io:format("collision detected!  distance: ~p", [EuclideanDistance]),
 	    true;
 	_ ->
 	    false
